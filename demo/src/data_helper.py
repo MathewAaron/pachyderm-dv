@@ -3,8 +3,38 @@
 import pandas as pd
 from from_root import from_here
 import os, sys
-sys.path.append(str(from_here('dp_utils')))
-from pm3d_utils import *
+sys.path.append(str(from_here('..')))
+from utils.utils import *
+
+def preprocess_raw_calibration_metadata(raw_calibration_data: pd.DataFrame) -> pd.DataFrame:
+    """
+        Standardize and clean raw calibration metadata before preprocessing.
+    """
+    metadata = raw_calibration_data.copy()
+
+    metadata = metadata.rename(columns={
+        'image_image_url': 'ImageUrl',
+        'image_image_type': 'ImageType',
+        'set_distance': 'GroundFrameDist',
+        'type_of_crop': 'TypeOfCrop',
+        'type_of_cover_crops': 'TypeOfCoverCrops',
+        'Dry Weight (g)': 'BiomassWeight',
+        'Image Name (from PlantMap3D app)': 'ImgName(app)',
+        'set_set_number': 'SetId'
+    })
+
+    metadata['FileName'] = metadata['ImageUrl'].str.split('/').str[-1]
+    metadata = metadata.drop(index=0).reset_index(drop=True)
+    metadata = metadata.drop('Unnamed: 0', axis=1)
+
+    # Strip whitespace from column names
+    metadata.columns = [col.strip() for col in metadata.columns]
+
+    # Fill missing 'Other' in Species wherever Functional Group has 'Other'
+    mask = (metadata["Functional Group"] == "Other") & (metadata["Species"].isna())
+    metadata.loc[mask, "Species"] = "Other"
+
+    return metadata
 
 def preprocess_calibration_data(calibration_metadata,img_type_list:list = None):
     """
@@ -40,35 +70,35 @@ def test_duplicate_biomass_fnames(metadata):
     """
         NOTE : This function is a sanity check to see if the preprocessed metadata has any irregularities/ duplicates
     """
-    pm3d_suspicious_fnames = (
+    suspicious_fnames = (
     metadata.groupby(['FileName', 'ImageType', 'Species'])
         .size() 
         .reset_index(name='TotalSpeciesEntry')
         .sort_values(["FileName"], ascending=True)
     )
-    pm3d_suspicious_fnames = pm3d_suspicious_fnames.loc[pm3d_suspicious_fnames['TotalSpeciesEntry'] > 1]
+    suspicious_fnames = suspicious_fnames.loc[suspicious_fnames['TotalSpeciesEntry'] > 1]
 
-    assert len(pm3d_suspicious_fnames) == 0 , f"Suspicious frames found : {pm3d_suspicious_fnames}"
+    assert len(suspicious_fnames) == 0 , f"Suspicious frames found : {suspicious_fnames}"
 
 def reorder_calibration_metadata(metadata):
     """
-        NOTE : This function reorders the csv file into a format the MTL model can train on
+        NOTE : This function reorders the csv file into a format the model can train on
     """
-    pm3d_pivot_metadata = metadata.pivot_table(
+    pivot_metadata = metadata.pivot_table(
         index=['FileName','ImageUrl','SetId','ImageType','GroundFrameDist','TypeOfCoverCrops'],
         columns='Species',
         values='BiomassWeight',
         aggfunc='first'
     )
-    pm3d_pivot_metadata = pm3d_pivot_metadata.reset_index()
-    pm3d_pivot_metadata = pm3d_pivot_metadata.rename_axis(None, axis=1)  # Remove any axis name
+    pivot_metadata = pivot_metadata.reset_index()
+    pivot_metadata = pivot_metadata.rename_axis(None, axis=1)  # Remove any axis name
 
-    return pm3d_pivot_metadata
+    return pivot_metadata
 
 def list_jpg_files(directory):
         return [f for f in os.listdir(directory) if f.lower().endswith('.jpg')]
 
-def generate_pm3d_popular_mixes(pm3d_metadata):
+def generate_popular_mixes(mix_metadata):
     """
         Currently some popular mixes are : 
         Cereal rye, Hairy vetch
@@ -88,115 +118,115 @@ def generate_pm3d_popular_mixes(pm3d_metadata):
 
     """
 
-    pm3d_metadata['Rye-Vetch-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Rye-Vetch-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Cereal rye"])) and 
                                                                                 (pd.notna(row["Hairy vetch"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
 
-    pm3d_metadata['Rye-Clover-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Rye-Clover-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Cereal rye"])) and 
                                                                                 (pd.notna(row["Crimson clover"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Rye-Peas-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Rye-Peas-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Cereal rye"])) and 
                                                                                 (pd.notna(row["Winter peas"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
     
-    pm3d_metadata['Rye-Vetch-Brassica-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Rye-Vetch-Brassica-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Cereal rye"])) and 
                                                                                 (pd.notna(row["Hairy vetch"])) and 
                                                                                 (pd.notna(row["Brassica napus"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Rye-Clover-Brassica-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Rye-Clover-Brassica-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Cereal rye"])) and 
                                                                                 (pd.notna(row["Crimson clover"])) and 
                                                                                 (pd.notna(row["Brassica napus"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Rye-Peas-Brassica-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Rye-Peas-Brassica-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Cereal rye"])) and 
                                                                                 (pd.notna(row["Winter peas"])) and 
                                                                                 (pd.notna(row["Brassica napus"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Wheat-Vetch-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Wheat-Vetch-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Wheat"])) and 
                                                                                 (pd.notna(row["Hairy vetch"]))
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Wheat-Clover-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Wheat-Clover-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Wheat"])) and 
                                                                                 (pd.notna(row["Crimson clover"]))
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Wheat-Peas-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Wheat-Peas-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Wheat"])) and 
                                                                                 (pd.notna(row["Winter peas"]))
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Wheat-Vetch-Brassica-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Wheat-Vetch-Brassica-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Wheat"])) and 
                                                                                 (pd.notna(row["Hairy vetch"])) and 
                                                                                 (pd.notna(row["Brassica napus"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Wheat-Clover-Brassica-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Wheat-Clover-Brassica-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Wheat"])) and 
                                                                                 (pd.notna(row["Crimson clover"])) and 
                                                                                 (pd.notna(row["Brassica napus"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Wheat-Peas-Brassica-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Wheat-Peas-Brassica-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Wheat"])) and 
                                                                                 (pd.notna(row["Winter peas"])) and 
                                                                                 (pd.notna(row["Brassica napus"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Rye-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Rye-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Cereal rye"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Wheat-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Wheat-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Wheat"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Rye-Brassica-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Rye-Brassica-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Cereal rye"])) and 
                                                                                 (pd.notna(row["Brassica napus"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    pm3d_metadata['Wheat-Brassica-Mix'] = pm3d_metadata.apply(
+    mix_metadata['Wheat-Brassica-Mix'] = mix_metadata.apply(
                                                                 lambda row: 1 if (pd.notna(row["Wheat"])) and 
                                                                                 (pd.notna(row["Brassica napus"])) 
                                                                 else None, 
                                                                 axis=1
                                                             )
-    return pm3d_metadata
+    return mix_metadata
 
-def extract_data_from_popular_mix(pm3d_metadata, column_names: list):
+def extract_data_from_popular_mix(mix_metadata, column_names: list):
     """
-        Extract one/ many mixes from pm3d data.
+        Extract one/ many mixes from data.
     """
-    metadata = pm3d_metadata.copy()
+    metadata = mix_metadata.copy()
 
     # Ensure all provided column names exist in the DataFrame
     valid_columns = [col for col in column_names if col in metadata.columns]
@@ -212,18 +242,14 @@ def extract_data_from_popular_mix(pm3d_metadata, column_names: list):
 
     return metadata
 
-## Example Usage
+def export_results_to_csv(results_df: pd.DataFrame, output_csv_path: str, print_results: bool = True) -> pd.DataFrame:
+    """
+        Clean final results and export to CSV.
+    """
+    results = results_df.dropna(axis=1, how='all')
 
-# if __name__ == '__main__' : 
+    if print_results:
+        print(results)
 
-#     pm3d_raw_data = read_csv_as_df('/home/asmathew/PlantMap3D-CV-Pipeline/pm3d-training-data.csv')
-#     extract_ny_jannik = read_csv_as_df('/home/asmathew/PlantMap3D-CV-Pipeline/NYJannink_oats_peas_2024-06-07_images.csv')
-#     test_data = preprocess_calibration_data(pm3d_raw_data)
-#     test_duplicate_biomass_fnames(test_data)
-#     reorder_test = reorder_calibration_metadata(test_data)
-#     mix_test = generate_pm3d_popular_mixes(reorder_test)
-    
-#     ny_jannik = mix_test[mix_test['FileName'].isin(extract_ny_jannik['FileName'])]
-#     ny_jannik = ny_jannik.dropna(axis=1, how='all')
-#     ny_jannik.to_csv('ny_jannik_data.csv',index=False)
-#     print(ny_jannik)
+    results.to_csv(output_csv_path, index=False)
+    return results
