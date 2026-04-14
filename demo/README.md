@@ -1,4 +1,4 @@
-# PlantMap3D Calibration Data Pipeline — Pachyderm Demo
+# Data Pipeline — Pachyderm Demo
 
 ## Summary
 
