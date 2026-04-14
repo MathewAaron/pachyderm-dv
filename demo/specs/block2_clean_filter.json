@@ -1,0 +1,21 @@
+{
+  "pipeline": {
+    "name": "block2_clean_filter"
+  },
+  "description": "Block 2: Fix species names, drop duplicates, filter to rgb+depth image types",
+  "transform": {
+    "image": "docker.io/library/pm3d-pipeline:v3",
+    "cmd": ["python", "/app/block2_clean_filter.py"]
+  },
+  "autoscaling": false,
+  "input": {
+    "pfs": {
+      "repo": "block1_preprocess",
+      "glob": "/"
+    }
+  },
+  "resourceLimits": {
+    "memory": "512Mi",
+    "cpu": 1
+  }
+}

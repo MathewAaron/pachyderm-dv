@@ -1,0 +1,21 @@
+{
+  "pipeline": {
+    "name": "block3_reorder_pivot"
+  },
+  "description": "Block 3: Pivot table — one row per (FileName, ImageType), species as columns",
+  "transform": {
+    "image": "docker.io/library/pm3d-pipeline:v3",
+    "cmd": ["python", "/app/block3_reorder_pivot.py"]
+  },
+  "autoscaling": false,
+  "input": {
+    "pfs": {
+      "repo": "block2_clean_filter",
+      "glob": "/"
+    }
+  },
+  "resourceLimits": {
+    "memory": "512Mi",
+    "cpu": 1
+  }
+}

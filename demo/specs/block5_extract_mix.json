@@ -1,0 +1,21 @@
+{
+  "pipeline": {
+    "name": "block5_extract_mix"
+  },
+  "description": "Block 5: Filter to rows matching Rye-Clover-Mix or Wheat-Clover-Mix",
+  "transform": {
+    "image": "docker.io/library/pm3d-pipeline:v3",
+    "cmd": ["python", "/app/block5_extract_mix.py"]
+  },
+  "autoscaling": false,
+  "input": {
+    "pfs": {
+      "repo": "block4_gen_mixes",
+      "glob": "/"
+    }
+  },
+  "resourceLimits": {
+    "memory": "512Mi",
+    "cpu": 1
+  }
+}

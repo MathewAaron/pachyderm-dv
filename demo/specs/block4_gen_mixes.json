@@ -1,0 +1,21 @@
+{
+  "pipeline": {
+    "name": "block4_gen_mixes"
+  },
+  "description": "Block 4: Add 16 boolean mix-flag columns (Rye-Clover, Wheat-Clover, etc.)",
+  "transform": {
+    "image": "docker.io/library/pm3d-pipeline:v3",
+    "cmd": ["python", "/app/block4_gen_mixes.py"]
+  },
+  "autoscaling": false,
+  "input": {
+    "pfs": {
+      "repo": "block3_reorder_pivot",
+      "glob": "/"
+    }
+  },
+  "resourceLimits": {
+    "memory": "512Mi",
+    "cpu": 1
+  }
+}

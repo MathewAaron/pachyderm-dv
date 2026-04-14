@@ -1,0 +1,21 @@
+{
+  "pipeline": {
+    "name": "block1_preprocess"
+  },
+  "description": "Block 1: Rename columns, extract FileName, strip whitespace, fill missing Species",
+  "transform": {
+    "image": "docker.io/library/pm3d-pipeline:v3",
+    "cmd": ["python", "/app/block1_preprocess.py"]
+  },
+  "autoscaling": false,
+  "input": {
+    "pfs": {
+      "repo": "pm3d_data",
+      "glob": "/"
+    }
+  },
+  "resourceLimits": {
+    "memory": "512Mi",
+    "cpu": 1
+  }
+}
