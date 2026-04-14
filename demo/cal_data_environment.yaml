@@ -1,0 +1,14 @@
+name: mtl_calibration_data
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pip=23.3
+  - pandas==2.2.1
+  - requests
+  - pyyaml
+  - matplotlib
+  - pip:
+      - from-root

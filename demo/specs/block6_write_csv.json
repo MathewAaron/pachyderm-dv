@@ -1,0 +1,21 @@
+{
+  "pipeline": {
+    "name": "block6_write_csv"
+  },
+  "description": "Block 6: Export final filtered results to output.csv",
+  "transform": {
+    "image": "docker.io/library/pm3d-pipeline:v3",
+    "cmd": ["python", "/app/block6_write_csv.py"]
+  },
+  "autoscaling": false,
+  "input": {
+    "pfs": {
+      "repo": "block5_extract_mix",
+      "glob": "/"
+    }
+  },
+  "resourceLimits": {
+    "memory": "512Mi",
+    "cpu": 1
+  }
+}
